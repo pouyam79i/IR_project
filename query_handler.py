@@ -4,6 +4,7 @@
 import json
 import os
 from colorama import Fore, Back, Style
+from parsivar import FindStems
 
 # running app
 os.system('cls' if os.name == 'nt' else 'clear')
@@ -12,12 +13,13 @@ print(Fore.GREEN + "Booting Query Handler..." + Style.RESET_ALL)
 # global vars
 raw_data = {}
 pi = {}  #positional index - result of previous parts!
+stopWords = ['و', 'در', 'به', 'از', 'که', 'این', 'را', 'با', 'برای', 'آن', 'خود', 'تا', 'کرد', 'بر', 'هم', 'نیز', 'وی', 'اما', 'یا', 'هر', 'ویا', '', 'ها', 'های']
 
-# reading data files
-with open('json/IR_data_news_12k.json', 'r', encoding='utf-8') as data_file:
-    raw_data = json.load(data_file)
-with open('json/positional_indexing_result.json', 'r', encoding='utf-8') as data_file:
-    pi = json.load(data_file)
+# # reading data files
+# with open('json/IR_data_news_12k.json', 'r', encoding='utf-8') as data_file:
+#     raw_data = json.load(data_file)
+# with open('json/positional_indexing_result.json', 'r', encoding='utf-8') as data_file:
+#     pi = json.load(data_file)
 
 
 # this class contain boolean model search algorithms
@@ -92,11 +94,64 @@ class BooleanModel:
 # TODO: so for it works only with docIDs - we have nothing to do with termIDs
 class QueryAnalyzer:
     def __init__(self) -> None:
-        pass
+        self.search_history = [] 
     
-    # TODO: parsing query for BooleanModel
-    def queryParser(raw_query = ''):
-        pass
+    # parsing query for BooleanModel
+    def queryParser(self, raw_query = ''):
+        self.search_history.append(raw_query)
+        parsed_query = {'and':set(), 'or':set(), 'not':set()}
+        stemmer = FindStems()
+        # extracting must words!
+        must_words = []
+        on_save = False
+        terms = ''
+        next_raw_query = raw_query
+        for i in range(len(raw_query)):
+            print("index: {}, len: {}, item: {}".format(i, len(raw_query), raw_query[i]))
+            if not on_save and raw_query[i] == '\"':
+                on_save = True
+            elif on_save and raw_query[i] == '\"':
+                on_save = False
+                must_words.append(terms)
+                next_raw_query = next_raw_query.replace('\"' + terms + '\"', '')
+                terms = ''
+            elif on_save:
+                terms += raw_query[i]
+        for terms in must_words:
+            for t in terms.split(' '):
+                t = stemmer.convert_to_stem(t)
+                if t not in stopWords:
+                    parsed_query['and'].add(t)
+        raw_query = next_raw_query
+        # extracting 'not' words
+        temp_split = raw_query.split(' ')
+        raw_query = []
+        not_flag = False
+        for t in temp_split:
+            t = stemmer.convert_to_stem(t)
+            if t == '!':
+                not_flag = True
+            elif not_flag:
+                not_flag = False
+                if t not in stopWords:
+                    parsed_query['not'].add(t)
+                    if t in parsed_query['and']:
+                        parsed_query['and'].remove(t)
+            else:
+                if t not in stopWords:
+                    raw_query.append(t)
+        # extracting 'or' words
+        for t in raw_query:
+            t = stemmer.convert_to_stem(t)
+            if t not in parsed_query['and'] and t not in parsed_query['not']:
+                parsed_query['or'].add(t)
+        # returning parsed query
+        res = {'and':[], 'or':[], 'not':[]}
+        res['and'] = list(parsed_query['and'])
+        res['or'] = list(parsed_query['or'])
+        res['not'] = list(parsed_query['not'])
+        return res
+
 
     # tries to build p lists for the parsed query
     # TODO: 'or' search logic is not implemented. right now we have only 'and' and 'or'
@@ -143,6 +198,7 @@ class QueryAnalyzer:
 
 
 # query handler
+qa = QueryAnalyzer()
 os.system('cls' if os.name == 'nt' else 'clear')
 while True:
     inVal = str(input(Fore.BLUE + 'Insert Query:'))
@@ -152,6 +208,9 @@ while True:
         os.system('cls' if os.name == 'nt' else 'clear')
         continue
     # TODO: add analyzer here
+    print(Fore.YELLOW)
+    print(qa.queryParser(inVal))
+    print(Style.RESET_ALL)
 
 
-print("Query Handler is Shutdown!")
+print(Fore.RED + "Query Handler is Shutdown!" + Style.RESET_ALL)
