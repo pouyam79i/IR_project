@@ -161,6 +161,8 @@ class QueryAnalyzer:
         not_p_list = []
         # gathering 'and' terms postings list
         for item in parsed_query['and']:
+            if item not in pi.keys():
+                continue
             info = pi[item]
             if info is None:
                 print(Fore.RED + "No such a term as {}!".format(item) + Style.RESET_ALL)
@@ -182,6 +184,8 @@ class QueryAnalyzer:
                     break
         # gathering 'or' terms postings list
         for item in parsed_query['or']:
+            if item not in pi.keys():
+                continue
             info = pi[item]
             if info is None:
                 print(Fore.RED + "No such a term as {}!".format(item) + Style.RESET_ALL)
@@ -204,6 +208,8 @@ class QueryAnalyzer:
         # gathering 'not' terms postings list  
         res_set = set()
         for item in parsed_query['not']:
+            if item not in pi.keys():
+                continue
             info = pi[item]
             if info is None:
                 print(Fore.RED + "No such a term as {}!".format(item) + Style.RESET_ALL)
@@ -227,7 +233,9 @@ class QueryAnalyzer:
                 p2 = list(termPList['and'].pop(0))
                 res_and = boolModel.and_ops(res_and, p2)
             res = res_and 
-        if emptyAnd:      
+        if emptyAnd:     
+            if len(termPList['or']) == 0:
+                return []
             res_or = list(termPList['or'].pop(0))
             while len(termPList['or']) != 0:
                 p2 = termPList['or'].pop(0)
@@ -253,9 +261,10 @@ class QueryAnalyzer:
             data = raw_data[str(item)]
             print(Fore.YELLOW + "Result {} -> {}".format(limit, data['title']) + Fore.RESET)
             # TODO: show matching words!
-            print(Fore.GREEN + data['content'] + Fore.RESET)
-
-
+            if len( data['content']) > 50:
+                print(Fore.GREEN + data['content'][:50] + '...' + Fore.RESET)
+            else:
+                print(Fore.GREEN + data['content'] + Fore.RESET)
 
 
 # query handler
