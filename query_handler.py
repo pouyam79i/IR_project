@@ -47,51 +47,53 @@ class BooleanModel:
     # handles or operations
     def or_ops(self, p1 = [], p2 = []):
         # 'both' and 'one' partition will be used for ranking!
-        ans = {'both':[], 'one':[]}
+        ans = list()
         while len(p1) != 0 and len(p2) != 0:
             docID1 = int(p1[0])
             docID2 = int(p2[0]) 
             if docID1 == docID2:
-                ans['both'].append(docID1)
+                ans.append(docID1)
                 p1.pop(0)
                 p2.pop(0)
             elif docID2 > docID1:
-                ans['one'].append(docID1)
+                ans.append(docID1)
                 p1.pop(0)
             else:
-                ans['one'].append(docID2)
+                ans.append(docID2)
                 p2.pop(0)
         return ans
 
     # handles not operations
-    def not_ops(self, p = [], not_p = [], mode='or'):
+    def not_ops(self, p = [], not_p = []):
+        if len(not_p) == 0:
+            return [int(i) for i in p]
         not_p = [int(i) for i in not_p]         # it is most likely to be string value
         ans = []
         # on or result check!
-        if mode == 'or':
-            ans = {'both':[], 'one':[]}
-            both = p['both']
-            one = p['one']
-            # for both
-            while len(both) != 0:
-                item = int(both.pop(0))
-                if item not in not_p:
-                    ans['both'].append(item)
-            # for one
-            while len(one) != 0:
-                item = one.pop(0)
-                if item not in not_p:
-                    ans['one'].append(item)
-        # any other result check
-        else:
-            while len(p) != 0:
-                item = p.pop(0)
-                if item not in not_p:
-                    ans.append(item)
+        # if mode == 'or':
+        #     ans = {'both':[], 'one':[]}
+        #     both = p['both']
+        #     one = p['one']
+        #     # for both
+        #     while len(both) != 0:
+        #         item = int(both.pop(0))
+        #         if item not in not_p:
+        #             ans['both'].append(item)
+        #     # for one
+        #     while len(one) != 0:
+        #         item = one.pop(0)
+        #         if item not in not_p:
+        #             ans['one'].append(item)
+        # # any other result check
+        # else:
+        while len(p) != 0:
+            item = int(p.pop(0))
+            if item not in not_p:
+                ans.append(item)
+        return ans
             
 
 # this class parse the input query and use BooleanModel to find result
-# TODO: so for it works only with docIDs - we have nothing to do with termIDs
 class QueryAnalyzer:
     def __init__(self) -> None:
         self.search_history = [] 
@@ -213,9 +215,47 @@ class QueryAnalyzer:
 
         return {'and':and_p_list, 'or': or_p_list, 'not':not_p_list}
 
-    # TODO: search over database and return results!
+    # search over database and return results!
     def search(self, termPList = {'and':[], 'or':[], 'not':[]}):
-        pass
+        emptyAnd = True
+        res = []
+        if len(termPList['and']) > 0:
+            emptyAnd = False
+            res_and = list(termPList['and'].pop(0))
+            boolModel = BooleanModel()
+            while len(termPList['and']) != 0:
+                p2 = list(termPList['and'].pop(0))
+                res_and = boolModel.and_ops(res_and, p2)
+            res = res_and 
+        if emptyAnd:      
+            res_or = list(termPList['or'].pop(0))
+            while len(termPList['or']) != 0:
+                p2 = termPList['or'].pop(0)
+                res_or = boolModel.or_ops(res_or, p2)
+            res = res_or
+        res = boolModel.not_ops(res, termPList['not'])
+        
+        return res
+    
+    # TODO: display result with a good ranking algorithm
+    def showRankingRes(self, res = [], parsed_query = {'and':[], 'or':[], 'not':[]}):
+        if len(res) == 0:
+            print(Fore.RED + "No result found" + Style.RESET_ALL)
+
+        # TODO: ranking algorithm here!
+        
+        # *********** end of ranking algorithm!
+        limit = 0
+        for item in res:
+            limit += 1
+            if limit > 5:
+                break
+            data = raw_data[str(item)]
+            print(Fore.YELLOW + "Result {} -> {}".format(limit, data['title']) + Fore.RESET)
+            # TODO: show matching words!
+            print(Fore.GREEN + data['content'] + Fore.RESET)
+
+
 
 
 # query handler
@@ -228,11 +268,13 @@ while True:
     if inVal == 'clear' or inVal == 'cls':
         os.system('cls' if os.name == 'nt' else 'clear')
         continue
-    qa.search(
-        qa.termPListExtractor(
-            qa.queryParser(inVal)
+    # TODO: adapt to ranking algorithm
+    qa.showRankingRes( 
+            qa.search(
+                qa.termPListExtractor(
+                    qa.queryParser(inVal)
+                )
+            )
         )
-    )
-
 
 print(Fore.RED + "Query Handler is Shutdown!" + Style.RESET_ALL)
