@@ -15,11 +15,11 @@ raw_data = {}
 pi = {}  #positional index - result of previous parts!
 stopWords = ['و', 'در', 'به', 'از', 'که', 'این', 'را', 'با', 'برای', 'آن', 'خود', 'تا', 'کرد', 'بر', 'هم', 'نیز', 'وی', 'اما', 'یا', 'هر', 'ویا', '', 'ها', 'های']
 
-# # reading data files
-# with open('json/IR_data_news_12k.json', 'r', encoding='utf-8') as data_file:
-#     raw_data = json.load(data_file)
-# with open('json/positional_indexing_result.json', 'r', encoding='utf-8') as data_file:
-#     pi = json.load(data_file)
+# reading data files
+with open('json/IR_data_news_12k.json', 'r', encoding='utf-8') as data_file:
+    raw_data = json.load(data_file)
+with open('json/positional_indexing_result.json', 'r', encoding='utf-8') as data_file:
+    pi = json.load(data_file)
 
 
 # this class contain boolean model search algorithms
@@ -29,7 +29,7 @@ class BooleanModel:
         pass
 
     # handles and operations
-    def and_ops(p1 = [], p2 = []):
+    def and_ops(self, p1 = [], p2 = []):
         ans = []
         while len(p1) != 0 and len(p2) != 0:
             docID1 = int(p1[0])
@@ -45,7 +45,7 @@ class BooleanModel:
         return ans
 
     # handles or operations
-    def or_ops(p1 = [], p2 = []):
+    def or_ops(self, p1 = [], p2 = []):
         # 'both' and 'one' partition will be used for ranking!
         ans = {'both':[], 'one':[]}
         while len(p1) != 0 and len(p2) != 0:
@@ -64,7 +64,7 @@ class BooleanModel:
         return ans
 
     # handles not operations
-    def not_ops(p = [], not_p = [], mode='or'):
+    def not_ops(self, p = [], not_p = [], mode='or'):
         not_p = [int(i) for i in not_p]         # it is most likely to be string value
         ans = []
         # on or result check!
@@ -107,7 +107,6 @@ class QueryAnalyzer:
         terms = ''
         next_raw_query = raw_query
         for i in range(len(raw_query)):
-            print("index: {}, len: {}, item: {}".format(i, len(raw_query), raw_query[i]))
             if not on_save and raw_query[i] == '\"':
                 on_save = True
             elif on_save and raw_query[i] == '\"':
@@ -152,10 +151,8 @@ class QueryAnalyzer:
         res['not'] = list(parsed_query['not'])
         return res
 
-
     # tries to build p lists for the parsed query
-    # TODO: 'or' search logic is not implemented. right now we have only 'and' and 'or'
-    def termPListExtractor(parsed_query = {'and':[], 'or':[], 'not':[]}):
+    def termPListExtractor(self, parsed_query = {'and':[], 'or':[], 'not':[]}):
         freq = []       # keep track of frequency of terms
         and_p_list = []
         or_p_list = []
@@ -169,7 +166,7 @@ class QueryAnalyzer:
             freq.append(int(info['freq']))
             and_p_list.append(info['docIDs'].keys())
             # min sort
-            i = range(len(freq))
+            i = len(freq)
             while i > 1:
                 i -= 1
                 if freq[i] < freq[i-1]:
@@ -181,11 +178,35 @@ class QueryAnalyzer:
                     and_p_list[i-1] = temp
                 else:
                     break
-
-        # gathering 'not' terms postings list - 
+        # gathering 'or' terms postings list
+        for item in parsed_query['or']:
+            info = pi[item]
+            if info is None:
+                print(Fore.RED + "No such a term as {}!".format(item) + Style.RESET_ALL)
+                continue
+            freq.append(int(info['freq']))
+            and_p_list.append(info['docIDs'].keys())
+            # min sort
+            i = len(freq)
+            while i > 1:
+                i -= 1
+                if freq[i] < freq[i-1]:
+                    temp = freq[i]
+                    freq[i] = freq[i-1]
+                    freq[i-1] = temp
+                    temp = and_p_list[i] 
+                    and_p_list[i] = and_p_list[i-1]
+                    and_p_list[i-1] = temp
+                else:
+                    break
+        # gathering 'not' terms postings list  
         res_set = set()
         for item in parsed_query['not']:
-            docIDs = pi[item]['docIDs'].keys()
+            info = pi[item]
+            if info is None:
+                print(Fore.RED + "No such a term as {}!".format(item) + Style.RESET_ALL)
+                continue
+            docIDs = info['docIDs'].keys()
             for id in docIDs:
                 res_set.add(id)
         not_p_list = list(res_set)
@@ -193,7 +214,7 @@ class QueryAnalyzer:
         return {'and':and_p_list, 'or': or_p_list, 'not':not_p_list}
 
     # TODO: search over database and return results!
-    def search(termPList = {'and':[], 'or':[], 'not':[]}):
+    def search(self, termPList = {'and':[], 'or':[], 'not':[]}):
         pass
 
 
@@ -207,10 +228,11 @@ while True:
     if inVal == 'clear' or inVal == 'cls':
         os.system('cls' if os.name == 'nt' else 'clear')
         continue
-    # TODO: add analyzer here
-    print(Fore.YELLOW)
-    print(qa.queryParser(inVal))
-    print(Style.RESET_ALL)
+    qa.search(
+        qa.termPListExtractor(
+            qa.queryParser(inVal)
+        )
+    )
 
 
 print(Fore.RED + "Query Handler is Shutdown!" + Style.RESET_ALL)
