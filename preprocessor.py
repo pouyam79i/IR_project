@@ -94,13 +94,13 @@ for id in docID:
     position = 0
     for term in contents[id]['content']:
         if term not in positional_indexed.keys():
-            positional_indexed[term] = {'freq':1}
+            positional_indexed[term] = {'freq':1, 'docIDs':{}}
         else:
             positional_indexed[term]['freq'] = positional_indexed[term]['freq'] + 1
         if id not in positional_indexed[term].keys():
-            positional_indexed[term][id] = [position]
+            positional_indexed[term]['docIDs'][id] = [position]
         else:
-            positional_indexed[term][id].append(position)
+            positional_indexed[term]['docIDs'][id].append(position)
         position += 1
 # sorting by terms:
 myKeys = list(positional_indexed.keys())
