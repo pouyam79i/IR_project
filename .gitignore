@@ -1,0 +1,7 @@
+# Ignore my files
+myDocs/
+extra/
+
+
+# json files here are large - i just put a sample
+json/
