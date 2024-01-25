@@ -1,4 +1,5 @@
 from indexer import Indexer
+from search_engine import SearchEngine
 
 ENABLE_INDEXER = False
 ENABLE_SEARCH = True
@@ -9,10 +10,9 @@ INDEX_ADDRESS = 'index.json'
 def main():
 
     my_indexer = Indexer(DB_ADDRESS, INDEX_ADDRESS)
-    
-    if ENABLE_INDEXER: my_indexer.run()
-    if not ENABLE_SEARCH: return
+    my_search_engine = SearchEngine(INDEX_ADDRESS)
 
-    # TODO: add search engine here
+    if ENABLE_INDEXER: my_indexer.run()
+    if ENABLE_SEARCH: my_search_engine.run()
 
 main()

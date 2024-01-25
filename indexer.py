@@ -2,7 +2,7 @@ import json
 # from hazm.utils import stopwords_list
 from hazm import Normalizer, Stemmer, word_tokenize, stopwords_list
 
-DEBUG = True
+DEBUG = False
 
 # This is the indexer class
 # It handles everything related to indexing!
@@ -20,7 +20,7 @@ class Indexer:
         self.normalizer = Normalizer().normalize
         self.stemmer = Stemmer().stem
         self.tokenizer = word_tokenize
-        self.useless_notations = ['', '-', '+', '*', '%', '$', '/', '0', '‌'] # no space or half space removal
+        self.useless_notations = ['_' ,'-', '+', '*', '%', '$', '/', '.', '!', '(', ')', '^', '\\', ';', '\'', '\"', '{', '}', '[', ']', ',', ':'] # hashtag is useful
         self.stop_words = stopwords_list()[:50]
 
     # Load Database (a json files here)
@@ -59,15 +59,30 @@ class Indexer:
         for id in self.db:
             # First: Normalize Content
             content = self.normalizer(self.db[id]['content'])
+            # Also: remove useless notations
+            temp = content
+            content = ''
+            for i in temp:
+                if i in self.useless_notations:
+                    continue
+                content = content + i
+
             # Second: Tokenizing
             new_tokens = self.tokenizer(content)
+           
             # Third: remove stop words
             non_sw_new_tokens = []
             for i in new_tokens:
-                if i in self.stop_words or i in self.useless_notations:
+                if i in self.stop_words or i in self.useless_notations or len(i) == 0:
                     continue
+               
                 # Forth: stem the word
-                non_sw_new_tokens.append({"doc_id":id, "token":self.stemmer(i)})
+                stem = self.stemmer(i)
+                if len(stem) == 0:
+                    continue
+
+                # Purified tokens
+                non_sw_new_tokens.append({"doc_id":id, "token":stem})
 
             tokens.extend(non_sw_new_tokens)
         
@@ -99,7 +114,6 @@ class Indexer:
         # sorting dictionary by term
         self.index = dict(sorted(self.index.items()))
         # ####################### end of indexing
-                
 
     # Run the indexer
     def run(self):
