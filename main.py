@@ -9,7 +9,7 @@ INDEX_ADDRESS = 'index.json'
 
 def main():
 
-    my_indexer = Indexer(DB_ADDRESS, INDEX_ADDRESS)
+    my_indexer = Indexer(DB_ADDRESS, INDEX_ADDRESS, 50)
     my_search_engine = SearchEngine(INDEX_ADDRESS)
 
     if ENABLE_INDEXER: my_indexer.run()
