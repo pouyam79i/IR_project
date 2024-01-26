@@ -133,12 +133,14 @@ class Indexer:
                 new_freq = temp_obj['freq'] + 1
                 postings_list = temp_obj['postings_list']
                 if doc_id not in postings_list:
-                    postings_list.append(doc_id)
+                    postings_list[doc_id] = 1
+                else:
+                    postings_list[doc_id] = postings_list[doc_id] + 1
                 self.index[token]['freq'] = new_freq
                 self.index[token]['postings_list'] = postings_list
             else:
-                self.index[token] = {'freq': 1, 'postings_list': [doc_id]}
-
+                # we have a term freq - and term/doc freq in postings
+                self.index[token] = {'freq': 1, 'postings_list': {doc_id:1}}
 
         # remove X most frequent words
         if self.remove_x_sw > 0:
