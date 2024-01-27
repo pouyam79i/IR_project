@@ -3,20 +3,19 @@ from typing import List
 from heapq import heappop, heappush, heapify
 from hazm import Normalizer, Lemmatizer, word_tokenize
 
-DEBUG = True
-
 # This is the indexer class
 # It handles everything related to indexing!
 class Indexer:
 
     # Initializer index
-    def __init__(self, load_addr:str, save_addr:str, remove_x_sw:int) -> None:
+    def __init__(self, load_addr:str, save_addr:str, remove_x_sw:int, debug_mode = False) -> None:
         # Indexer config
         self.load_addr = load_addr
         self.save_addr = save_addr
         self.remove_x_sw = remove_x_sw  # remove x most frequent words
         self.db = None                  # loading db into db
         self.index = dict()             # building index using dict as base data structure
+        self.DEBUG = debug_mode         
         
         # setup tools here
         self.normalizer = Normalizer().normalize
@@ -86,9 +85,13 @@ class Indexer:
         for term in list(self.index.keys()):
             heappush(heap, (-1 * int(self.index[term]['freq']), term))
 
+        max_element = len(heap)
+        if self.DEBUG and self.remove_x_sw >= 10 : print('Here you can see 10 first stop words:')
         for i in range(self.remove_x_sw):
+            if i >= max_element:
+                return
             item = heappop(heap)
-            if DEBUG and i < 10:
+            if self.DEBUG and i < 10:
                 print("{}-term: {}, freq: {}".format(i, item[1], item[0] * -1))
             self.index.pop(item[1])
 
@@ -115,7 +118,7 @@ class Indexer:
                 tokens.append({'doc_id': id, 'token':item})
         
         # Test Area
-        if DEBUG:
+        if self.DEBUG:
             print("first 10 Stop Words to remove: ", self.stop_words[:10])
             if len(tokens) >= 10:
                 print("Some of tokens ready to index:", tokens[:10])
