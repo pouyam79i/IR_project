@@ -8,12 +8,14 @@ from hazm import Normalizer, Lemmatizer, word_tokenize
 class Indexer:
 
     # Initializer index
-    def __init__(self, load_addr:str, save_addr:str, remove_x_sw:int, debug_mode = False) -> None:
+    def __init__(self, load_addr:str, save_addr:str, refined_db_addr:str, remove_x_sw:int, debug_mode = False) -> None:
         # Indexer config
         self.load_addr = load_addr
         self.save_addr = save_addr
+        self.refined_db_addr = refined_db_addr
         self.remove_x_sw = remove_x_sw  # remove x most frequent words
         self.db = None                  # loading db into db
+        self.refined_db = dict()       # after reading db - we create refined from docs
         self.index = dict()             # building index using dict as base data structure
         self.DEBUG = debug_mode         
         
@@ -28,14 +30,27 @@ class Indexer:
     # Load Database (a json files here)
     def __load_db(self):
         try:
+            count = 0
             with open(self.load_addr, 'r', encoding='utf-8') as file:
                 data = json.load(file)
                 self.db = dict()
                 for id in data:
                     self.db[id] = {
                         "content" : data[id]['content'],
-                        "url" : data[id]['url']
                     }
+                    shortened_content = ''
+                    if len(data[id]['content']) >= 50:
+                        shortened_content = data[id]['content'][:50] + '...'
+                    else:
+                        shortened_content = data[id]['content']
+                    self.refined_db[id] = {
+                        "title": data[id]['title'],
+                        "content" : shortened_content ,
+                        "url" : data[id]['url'],
+                        "t_count": 0
+                    }
+                    count += 1
+                print('Max Docs:', count)
                 return
         # File not found
         except FileNotFoundError:
@@ -50,8 +65,12 @@ class Indexer:
 
     # Save index file
     def __save_index(self):
+        
         with open(self.save_addr, 'w', encoding='UTF-8') as file:
-            json.dump(self.index, file, indent=2, ensure_ascii=True)
+            json.dump(self.index, file, indent=2, ensure_ascii=False)
+
+        with open(self.refined_db_addr, 'w', encoding='UTF-8') as file2:
+            json.dump(self.refined_db, file2, indent=2, ensure_ascii=False)
 
     # Normalizer is used to process contents and normalizing the text for that content 
     def __normalizer(self, content:str) -> str:
@@ -105,11 +124,17 @@ class Indexer:
             content = self.__normalizer(self.db[id]['content'])
             
             # Second: Tokenizing
-            new_tokens = self.__tokenizer(content)
-           
+            tks = self.__tokenizer(content)
+            new_tokens = []
             # Third: Stemming the tokens
-            for i in range(len(new_tokens)):
-                new_tokens[i] = self.__stemmer(new_tokens[i])
+            for t in tks:
+                stem = self.__stemmer(t)
+                if stem == '':
+                    continue
+                new_tokens.append(stem)
+
+            self.refined_db[id]['t_count'] = len(new_tokens)
+
 
             # Forth: Appending new tokens to the tokens list
             for item in new_tokens:
