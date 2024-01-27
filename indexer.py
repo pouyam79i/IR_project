@@ -39,8 +39,8 @@ class Indexer:
                         "content" : data[id]['content'],
                     }
                     shortened_content = ''
-                    if len(data[id]['content']) >= 50:
-                        shortened_content = data[id]['content'][:50] + '...'
+                    if len(data[id]['content']) > 200:
+                        shortened_content = data[id]['content'][:200] + '...'
                     else:
                         shortened_content = data[id]['content']
                     self.refined_db[id] = {

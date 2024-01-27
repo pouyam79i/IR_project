@@ -16,6 +16,6 @@ def main():
     my_search_engine = SearchEngine(INDEX_ADDRESS, REFINED_DB_ADDRESS, 12000 ,DEBUG)
 
     if ENABLE_INDEXER: my_indexer.run()
-    if ENABLE_SEARCH: my_search_engine.run()
+    if ENABLE_SEARCH: my_search_engine.run(test_q='فوتبالی')
 
 main()
