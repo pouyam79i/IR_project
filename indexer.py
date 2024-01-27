@@ -51,7 +51,7 @@ class Indexer:
     # Save index file
     def __save_index(self):
         with open(self.save_addr, 'w', encoding='UTF-8') as file:
-            json.dump(self.index, file, indent=4, ensure_ascii=False)
+            json.dump(self.index, file, indent=2, ensure_ascii=True)
 
     # Normalizer is used to process contents and normalizing the text for that content 
     def __normalizer(self, content:str) -> str:
@@ -119,7 +119,6 @@ class Indexer:
         
         # Test Area
         if self.DEBUG:
-            print("first 10 Stop Words to remove: ", self.stop_words[:10])
             if len(tokens) >= 10:
                 print("Some of tokens ready to index:", tokens[:10])
             else:
@@ -157,7 +156,6 @@ class Indexer:
     def run(self):
         self.__load_db()
         if self.db is None: 
-            return False
+            return
         self.__indexer_engine()
         self.__save_index()
-        return True
