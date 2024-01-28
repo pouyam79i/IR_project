@@ -8,15 +8,16 @@ from hazm import Normalizer, Lemmatizer, word_tokenize
 class Indexer:
 
     # Initializer index
-    def __init__(self, load_addr:str, save_addr:str, refined_db_addr:str, remove_x_sw:int, debug_mode = False) -> None:
+    def __init__(self, load_addr:str, save_addr:str, refined_db_addr:str, remove_x_sw:int, enable_normalizer:bool=True, debug_mode = False) -> None:
         # Indexer config
         self.load_addr = load_addr
         self.save_addr = save_addr
         self.refined_db_addr = refined_db_addr
-        self.remove_x_sw = remove_x_sw  # remove x most frequent words
-        self.db = None                  # loading db into db
-        self.refined_db = dict()       # after reading db - we create refined from docs
-        self.index = dict()             # building index using dict as base data structure
+        self.remove_x_sw = remove_x_sw              # remove x most frequent words
+        self.db = None                              # loading db into db
+        self.refined_db = dict()                    # after reading db - we create refined from docs
+        self.index = dict()                         # building index using dict as base data structure
+        self.enable_normalizer = enable_normalizer  # enabling normalizer
         self.DEBUG = debug_mode         
         
         # setup tools here
@@ -74,6 +75,7 @@ class Indexer:
 
     # Normalizer is used to process contents and normalizing the text for that content 
     def __normalizer(self, content:str) -> str:
+        if not self.enable_normalizer: return content
         content = self.normalizer(content)
         res = ''
         for c in content:
@@ -135,7 +137,6 @@ class Indexer:
 
             self.refined_db[id]['t_count'] = len(new_tokens)
 
-
             # Forth: Appending new tokens to the tokens list
             for item in new_tokens:
                 if item == '':
@@ -177,6 +178,10 @@ class Indexer:
         self.index = dict(sorted(self.index.items()))
         # ####################### end of indexing
 
+    # set normalizer
+    def set_enable_normalizer(self, enable_normalizer:bool=True):
+        self.enable_normalizer = enable_normalizer
+        
     # Run the indexer
     def run(self):
         self.__load_db()
