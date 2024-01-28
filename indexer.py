@@ -176,6 +176,10 @@ class Indexer:
 
         # sorting dictionary by term
         self.index = dict(sorted(self.index.items()))
+        
+        if self.DEBUG:
+            print("Number of extracted terms in dict: {}".format(len(list(self.index.keys()))))
+
         # ####################### end of indexing
 
     # set normalizer

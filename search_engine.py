@@ -137,7 +137,8 @@ class SearchEngine:
         return tf*idf
 
     # scoring docs by cosine, vector based!
-    def __score_cosine(self, vector_q:List[str], vector_q_len: float, vector_d:List[str], alpha:float=0.001)->float:
+    # alpha is smoother
+    def __score_cosine(self, vector_q:List[float], vector_q_len: float, vector_d:List[float], alpha:float=0.001)->float:
         vector_d_len = 0.0
         for i in vector_d:
             vector_d_len += math.pow(i, 2)
@@ -150,7 +151,8 @@ class SearchEngine:
         return score
         
     # search and rank here
-    def __search(self, processed_q:List[str], score_mode='tf_idf') -> List[str]:
+    # alpha is smoother
+    def __search(self, processed_q:List[str], score_mode='tf_idf', alpha:float=0.001) -> List[str]:
         
         # set search index (?champions)
         if self.using_champions_allowed:
@@ -171,8 +173,32 @@ class SearchEngine:
          
         # using cosine scoring.
         if score_mode=='cosine':
-            # TODO: complete cosine mode
-            pass
+            q_vec = []
+            for term in processed_q:
+                if index.get(term) != None:
+                    idf = math.log(self.max_doc/(1 + len(list(index[term]['postings_list'].keys())))) + alpha
+                else:
+                    idf = alpha
+                q_vec.append(idf)
+            
+            q_vec_len = 0
+            for item in q_vec:
+                q_vec_len += math.pow(item, 2)
+            q_vec_len = math.sqrt(q_vec_len)     
+            
+            for doc_id in related_doc_id:
+                d_vec = []
+                for term in processed_q:
+                    if index.get(term) != None:
+                        if index[term]['postings_list'].get(doc_id) != None:
+                            tf = math.log10(1 + index[term]['postings_list'][doc_id]) + alpha
+                        else:
+                            tf = alpha
+                    else:
+                        tf = alpha
+                    d_vec.append(tf)
+                score = self.__score_cosine(q_vec, q_vec_len, d_vec, alpha)
+                heappush(heap, (score * -1, doc_id))
 
         # using tf*idf scoring. DEFAULT
         else:
