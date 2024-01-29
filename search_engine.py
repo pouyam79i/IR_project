@@ -136,7 +136,7 @@ class SearchEngine:
             # if self.DEBUG: print("No such index={} for term: {}".format(doc_id, term))
             return 0 # there is no such term in this doc
         else:
-            tf = math.log10(1 + self.index[term]['postings_list'][doc_id])
+            tf = math.log10(1 + self.index[term]['postings_list'][doc_id]['tf'])
         df = len(list(self.index[term]['postings_list'].keys()))
         idf = math.log10(self.max_doc/df)
         # if self.DEBUG: print("for term'{}' and doc:{} tf={}, idf={}".format(term, doc_id, tf, idf))
@@ -199,7 +199,7 @@ class SearchEngine:
                 for term in processed_q:
                     if index.get(term) != None:
                         if index[term]['postings_list'].get(doc_id) != None:
-                            tf = math.log10(1 + index[term]['postings_list'][doc_id]) + alpha
+                            tf = math.log10(1 + index[term]['postings_list'][doc_id]['tf']) + alpha
                         else:
                             tf = alpha
                     else:
@@ -239,7 +239,7 @@ class SearchEngine:
                 heap = []
                 heapify(heap)
                 for doc_id in postings:
-                    heappush(heap, (postings[doc_id] ,doc_id))
+                    heappush(heap, (postings[doc_id]['tf'] ,doc_id))
                 extracted_top_docs = list()
                 i = 0
                 while i < x_most_related:
@@ -249,7 +249,7 @@ class SearchEngine:
                 extracted_top_docs.sort()
                 new_postings = dict()
                 for doc_id in extracted_top_docs:
-                    new_postings[str(doc_id)] = postings[str(doc_id)] 
+                    new_postings[str(doc_id)] = {'tf':postings[str(doc_id)]['tf'], 'positions': postings[str(doc_id)]['positions']}
                 self.champions_list[term] = {'freq':self.index[term]['freq'],'postings_list':new_postings}    
             else:
                 self.champions_list[term] = {'freq':self.index[term]['freq'],'postings_list':postings}
