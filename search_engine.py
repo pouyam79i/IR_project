@@ -1,21 +1,24 @@
-import json, math
+import json, math, time
 from typing import List
 from hazm import Normalizer, Lemmatizer, word_tokenize
 from heapq import heappop, heappush, heapify
 
 class SearchEngine:
 
-    def __init__(self, index_addr:str, refined_db_addr:str, max_doc:float=12000, debug_mode=False) -> None:
+    def __init__(self, index_addr:str, refined_db_addr:str, enable_normalizer:bool=True, debug_mode:bool=False) -> None:
         # class configs
         self.index_addr = index_addr
         self.refined_db_addr = refined_db_addr
+        self.index_is_loaded = False
         self.index = dict()
         self.db = dict()
         self.DEBUG = debug_mode
-        self.max_doc = max_doc
+        self.max_doc = 1000
+        self.enable_normalizer = enable_normalizer
         self.using_champions_allowed = False # it is not allowed by default
         self.champions_list = dict()         # TODO: it goes from a token to a few number of docs
         self.search_score_mode = 'tf_idf'
+        self.max_display_res = 5
         # tools configs
         self.normalizer = Normalizer().normalize
         self.stemmer = Lemmatizer().lemmatize
@@ -47,6 +50,9 @@ class SearchEngine:
         try:
             with open(self.refined_db_addr, 'r', encoding='utf-8') as file:
                 self.db = json.load(file)
+                self.max_doc = len(list(self.db.keys()))
+                if self.DEBUG:
+                    print("Max Doc:{}".format(self.max_doc))
                 return True
         # File not found
         except FileNotFoundError:
@@ -61,7 +67,7 @@ class SearchEngine:
 
     # Pre process queries
     def __query_processor(self, q:str) -> List[str]:
-        nq = self.normalizer(q)
+        nq = self.normalizer(q) if self.enable_normalizer else q
         rmun_nq = ''
         for i in nq:
             if i in self.useless_notations:
@@ -80,14 +86,14 @@ class SearchEngine:
         return stemmed_tokens
 
     # Displays result of search
-    def __display_results(self, res:List[str], max_display_res=5):
+    def __display_results(self, res:List[str]):
         print("Search Results:")
         if len(res) == 0:
             print("no result found!")
             return
         count = 0
         for doc_id in res:
-            if count >= max_display_res:
+            if count >= self.max_display_res:
                 return
             count += 1
             title = self.db[doc_id]['title']
@@ -149,7 +155,7 @@ class SearchEngine:
         dv = vector_d_len * vector_q_len + alpha 
         score /= dv
         return score
-        
+
     # search and rank here
     # alpha is smoother
     def __search(self, processed_q:List[str], score_mode='tf_idf', alpha:float=0.001) -> List[str]:
@@ -159,7 +165,9 @@ class SearchEngine:
             index = self.champions_list
         else:
             index = self.index
-
+        
+        start_time = time.time()
+        
         # searching only in related docs - index elimination        
         related_doc_id = []
         for term in processed_q:
@@ -207,16 +215,20 @@ class SearchEngine:
                 for term in processed_q:
                     score = score + self.__score_tf_idf(term, doc_id)
                 heappush(heap, (score * -1, doc_id))
-
+        
+        stop_time = time.time()
+        
         # extracting res
         res = []
         count = 0
-        while count < 5 and len(heap) > 0:
+        while len(heap) > 0:
             item = heappop(heap)
             if self.DEBUG and count < 5:
                 print("{}-Doc_ID: {} - Score: {}".format(count, item[1], item[0] * -1))
             res.append(item[1])
             count += 1
+        if self.DEBUG:
+            print("{} results in {} seconds:".format(len(res), stop_time - start_time))
         return res
 
     # this function updates champions list, then enables it -> so search engine will use champions list
@@ -255,18 +267,37 @@ class SearchEngine:
         self.search_score_mode = mode
         print('search mode set to \'{}\'. if not exist default is tf_idf'.format(mode))
     
+    # set max display res
+    def set_max_display_res(self, max_display_res:int):
+        if max_display_res <= 0:
+            self.max_display_res = 1
+        else:
+            self.max_display_res = max_display_res
+    
     # start search engine
-    def run(self, test_q='', max_display_res=5):
-        if not self.__load_index(): return
+    def run(self):
+        print("Running search engine...")
+        if not self.__load_index():
+            if self.DEBUG:
+                print("Failed to run search engine.")
+                return
         self.__load_refined_db()
-        if test_q != '':
-            purified_q = self.__query_processor(test_q)
+        self.index_is_loaded = True
+        print("Engine is up.") 
+    
+    # use this function to search
+    def search(self, query=''):
+        if not self.index_is_loaded:
+            print('Please run() engine first!')
+            return
+        if query != '':
+            purified_q = self.__query_processor(query)
             res = self.__search(purified_q, self.search_score_mode)
-            self.__display_results(res, max_display_res)
+            self.__display_results(res)
         else:
             q = ''
             while q.lower() != 'exit':
                 q = input('Please Type Your Query: ')
                 purified_q = self.__query_processor(q)
-                res = self.__search_tf_idf(purified_q)
-                self.__display_results(res, max_display_res)
+                res = self.__search(purified_q)
+                self.__display_results(res)
